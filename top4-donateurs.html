@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Top 4 Donateurs</title>
+<link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Rubik:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  body { font-family: 'Rubik', 'Segoe UI', sans-serif; padding: 10px; }
+
+  .board {
+    box-sizing: border-box; width: 400px; padding: 16px 16px 12px;
+    background: linear-gradient(180deg, rgba(14,16,30,.88), rgba(8,9,18,.88));
+    border: 2px solid #f2b51c; border-radius: 20px;
+    box-shadow: 0 0 22px rgba(242,181,28,.45);
+  }
+  h1 {
+    margin: 0 0 12px; text-align: center;
+    font: 34px 'Luckiest Guy', Impact, 'Arial Black', sans-serif; letter-spacing: 1.5px; color: #fff;
+    text-shadow: 0 3px 0 rgba(0,0,0,.7);
+  }
+  h1 span { color: #f2b51c; }
+
+  .row {
+    display: flex; align-items: center; gap: 12px; height: 58px; padding: 0 12px; margin-bottom: 8px;
+    border-radius: 14px; background: rgba(255,255,255,.06);
+    transition: background .4s;
+  }
+  .row.flash { animation: flash .9s; }
+  .pos {
+    flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+    font: 22px 'Luckiest Guy', Impact, 'Arial Black', sans-serif; color: #1a1a1a; padding-top: 3px; box-sizing: border-box;
+  }
+  .p1 { background: linear-gradient(180deg, #ffe58a, #f2b51c); }
+  .p2 { background: linear-gradient(180deg, #ffffff, #a9b4c6); }
+  .p3 { background: linear-gradient(180deg, #ffd2a8, #d7864a); }
+  .p4 { background: rgba(255,255,255,.25); color: #fff; }
+
+  .av {
+    flex: none; width: 42px; height: 42px; border-radius: 50%; overflow: hidden;
+    background: #f2b51c; display: grid; place-items: center;
+    font: 20px 'Luckiest Guy', Impact, 'Arial Black', sans-serif; color: #fff; padding-top: 2px; box-sizing: border-box;
+  }
+  .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .name {
+    flex: 1; min-width: 0; font-weight: 800; font-size: 20px; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-shadow: 0 2px 0 rgba(0,0,0,.6);
+  }
+  .val { flex: none; font: 22px 'Luckiest Guy', Impact, 'Arial Black', sans-serif; color: #f2b51c; padding-top: 3px; text-shadow: 0 2px 0 rgba(0,0,0,.6); }
+  .empty .name, .empty .val { color: rgba(255,255,255,.35); }
+
+  @keyframes flash { 0% { background: rgba(242,181,28,.45); } 100% { background: rgba(255,255,255,.06); } }
+</style>
+</head>
+<body>
+<div class="board">
+  <h1>TOP <span>DONATEURS</span></h1>
+  <div id="list"></div>
+</div>
+
+<script>
+const MODE = 'gifts';
+const ICON = '🪙';
+const params = new URLSearchParams(location.search);
+const WS_URL = params.get('ws') || 'ws://localhost:21213/';
+const STORE = 'top4_' + MODE;
+const RESET_AFTER = (Number(params.get('reset_h')) || 4) * 3600 * 1000;
+
+let scores = {};
+let lastTop = '';
+
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE) || 'null');
+    if (raw && Date.now() - raw.t < RESET_AFTER && !params.has('reset')) scores = raw.s || {};
+  } catch (e) { scores = {}; }
+}
+
+function save() {
+  if (params.has('test')) return;
+  try { localStorage.setItem(STORE, JSON.stringify({ t: Date.now(), s: scores })); } catch (e) {}
+}
+
+function fmt(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.0', '') + 'M';
+  if (n >= 1e4) return (n / 1e3).toFixed(1).replace('.0', '') + 'k';
+  return n.toLocaleString('fr-FR');
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+function render(changedId) {
+  const top = Object.entries(scores).sort((a, b) => b[1].v - a[1].v).slice(0, 4);
+  const list = document.getElementById('list');
+  let html = '';
+  for (let i = 0; i < 4; i++) {
+    const e = top[i];
+    if (!e) {
+      html += '<div class="row empty"><div class="pos p' + (i + 1) + '">' + (i + 1) + '</div>' +
+              '<div class="av">?</div><div class="name">—</div><div class="val">0</div></div>';
+      continue;
+    }
+    const [id, u] = e;
+    const initial = esc((u.n || '?').trim().charAt(0).toUpperCase());
+    const avatar = u.p
+      ? '<img src="' + esc(u.p) + '" onerror="this.parentNode.textContent=\'' + initial + '\'">'
+      : initial;
+    html += '<div class="row' + (id === changedId ? ' flash' : '') + '">' +
+            '<div class="pos p' + (i + 1) + '">' + (i + 1) + '</div>' +
+            '<div class="av">' + avatar + '</div>' +
+            '<div class="name">' + esc(u.n) + '</div>' +
+            '<div class="val">' + fmt(u.v) + ' ' + ICON + '</div></div>';
+  }
+  list.innerHTML = html;
+}
+
+function add(d, amount) {
+  if (!(amount > 0)) return;
+  const u = d.user || {};
+  const id = d.uniqueId || u.uniqueId || d.userId || u.userId;
+  if (!id) return;
+  const prev = scores[id] || { v: 0 };
+  scores[id] = {
+    v: prev.v + amount,
+    n: d.nickname || u.nickname || d.uniqueId || u.uniqueId || prev.n || 'Viewer',
+    p: d.profilePictureUrl || u.profilePictureUrl || prev.p || ''
+  };
+  save();
+  const topIds = Object.entries(scores).sort((a, b) => b[1].v - a[1].v).slice(0, 4).map(e => e[0]);
+  if (topIds.includes(id)) render(id);
+}
+
+function handle(msg) {
+  const ev = String(msg.event || '').toLowerCase();
+  const d = msg.data || {};
+  if (MODE === 'likes' && ev === 'like') {
+    add(d, Number(d.likeCount) || 0);
+  }
+  if (MODE === 'gifts' && ev === 'gift') {
+    if (Number(d.giftType) === 1 && d.repeatEnd === false) return;
+    const coins = Number(d.diamondCount) || 0;
+    const count = Number(d.repeatCount) || 1;
+    add(d, coins * count);
+  }
+}
+
+function connect() {
+  let ws;
+  try { ws = new WebSocket(WS_URL); } catch (e) { setTimeout(connect, 3000); return; }
+  ws.onclose = () => setTimeout(connect, 3000);
+  ws.onerror = () => ws.close();
+  ws.onmessage = e => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch (err) { return; }
+    handle(msg);
+  };
+}
+
+function test() {
+  const names = ['AnonK4K', 'NinjaDu418', 'xX_Sniper_Xx', 'LamaDoré', 'Zéro.Build', 'TurboTilted'];
+  const n = names[Math.floor(Math.random() * names.length)];
+  const d = { uniqueId: n.toLowerCase(), nickname: n };
+  if (MODE === 'likes') add(d, 5 + Math.floor(Math.random() * 60));
+  else add(d, [1, 5, 10, 30, 99, 199][Math.floor(Math.random() * 6)]);
+}
+
+load();
+render();
+if (params.has('test')) setInterval(test, 1200);
+connect();
+</script>
+</body>
+</html>
