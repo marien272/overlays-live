@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Daily Like</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  body { padding: 8px 12px; }
+
+  #line {
+    display: inline-block; white-space: nowrap;
+    font: 800 32px 'Montserrat', 'Segoe UI', Arial, sans-serif; color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,.85), 0 0 10px rgba(0,0,0,.5);
+  }
+  #label { color: #f4c542; margin-right: 14px; }
+  #line.done { color: #f4c542; transform-origin: left center; animation: pulse .6s ease-in-out 8; }
+  @keyframes pulse { 50% { transform: scale(1.06); filter: brightness(1.3); } }
+</style>
+</head>
+<body>
+<div id="line"><span id="label">DAILY LIKE</span><span id="cur">0</span> / <span id="max">30 000</span> likes</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const WS_URL = params.get('ws') || 'ws://localhost:21213/';
+const STEP = Number(params.get('palier')) || 30000;
+const RESET_AFTER = (Number(params.get('reset_h')) || 4) * 3600 * 1000;
+const STORE = 'drop_loot';
+const CELEBRATE_MS = 6000;
+
+const el = id => document.getElementById(id);
+let total = 0;
+let reached = 0;
+let celebrating = false;
+
+function num(n) {
+  return n.toLocaleString('fr-FR');
+}
+
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE) || 'null');
+    if (raw && Date.now() - raw.t < RESET_AFTER && !params.has('reset')) {
+      total = raw.total || 0;
+      reached = raw.reached || 0;
+    }
+  } catch (e) {}
+}
+
+function save() {
+  if (params.has('test')) return;
+  try { localStorage.setItem(STORE, JSON.stringify({ t: Date.now(), total, reached })); } catch (e) {}
+}
+
+function render() {
+  if (celebrating) return;
+  el('cur').textContent = num(total);
+  el('max').textContent = num((reached + 1) * STEP);
+}
+
+function celebrate(goal) {
+  celebrating = true;
+  el('line').classList.add('done');
+  el('label').textContent = 'DAILY LIKE!';
+  el('cur').textContent = num(goal);
+  el('max').textContent = num(goal);
+  celebrateTimer = setTimeout(() => {
+    el('line').classList.remove('done');
+    el('label').textContent = 'DAILY LIKE';
+    celebrating = false;
+    check();
+  }, CELEBRATE_MS);
+}
+
+function check() {
+  if (celebrating) return;
+  const nextGoal = (reached + 1) * STEP;
+  if (total >= nextGoal) {
+    reached++;
+    save();
+    celebrate(nextGoal);
+  } else {
+    render();
+  }
+}
+
+let celebrateTimer = null;
+
+function resetAll() {
+  total = 0;
+  reached = 0;
+  if (celebrateTimer) clearTimeout(celebrateTimer);
+  celebrating = false;
+  el('line').classList.remove('done');
+  el('label').textContent = 'DAILY LIKE';
+  save();
+  render();
+}
+
+function setTotal(n) {
+  if (!(n > total)) return;
+  total = n;
+  save();
+  check();
+}
+
+function handle(msg) {
+  const ev = String(msg.event || '').toLowerCase().replace(/[^a-z]/g, '');
+  if (ev === 'streamend' || ev === 'liveend') { resetAll(); return; }
+  if (ev !== 'like') return;
+  const d = msg.data || {};
+  const roomTotal = Number(d.totalLikeCount);
+  if (roomTotal > 0 && roomTotal < total * 0.8 && total - roomTotal > 1000) resetAll();
+  if (roomTotal > 0) setTotal(roomTotal);
+  else setTotal(total + (Number(d.likeCount) || 0));
+}
+
+function connect() {
+  let ws;
+  try { ws = new WebSocket(WS_URL); } catch (e) { setTimeout(connect, 3000); return; }
+  ws.onclose = () => setTimeout(connect, 3000);
+  ws.onerror = () => ws.close();
+  ws.onmessage = e => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch (err) { return; }
+    handle(msg);
+  };
+}
+
+load();
+render();
+if (params.has('test')) setInterval(() => setTotal(total + Math.floor(STEP / 12)), 700);
+connect();
+</script>
+</body>
+</html>

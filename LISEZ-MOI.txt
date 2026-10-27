@@ -1,0 +1,97 @@
+OVERLAYS TIKTOK LIVE - GUIDE D'INSTALLATION
+===========================================
+
+CE QUE CONTIENT CE DOSSIER
+--------------------------
+  rang-follow.html     A chaque nouveau follow : alerte « NEW FOLLOWER! » avec la photo, le pseudo
+                       et un rang Fortnite au hasard (« Mike is in Gold »). 8 rangs, même chance.
+                       Un viewer n'a son rang qu'une fois par live. Les alertes passent une par une.
+  top4-donateurs.html  Les 4 viewers qui ont envoyé le plus de cadeaux (icône pièce).
+  top4-likeurs.html    Les 4 viewers qui ont envoyé le plus de likes (icône cœur).
+  drop-loot.html       « DAILY LIKE 12 450 / 30 000 likes ». Paliers 30 000, 60 000, 90 000...
+                       A chaque palier : texte doré « DAILY LIKE! » pendant 6 s, puis palier suivant.
+                       Revient à 0 dès que le live s'arrête.
+
+Déjà fait dans TikFinity (site web) :
+  - Commande /pc : le chatbot répond avec les specs du PC.
+  - L'ancienne alerte Follow de TikFinity est désactivée (pas de double alerte).
+
+
+ÉTAPE 1 - TIKFINITY DESKTOP (sur le PC qui stream)
+--------------------------------------------------
+1. Installe TikFinity Desktop : https://tikfinity.zerody.one/app/
+2. Ouvre-le et connecte-toi (en haut à droite) avec ton compte TikFinity.
+3. Va dans Chat -> Chatbot, active le chatbot, puis clique « Send Test Message ».
+
+Sans TikFinity Desktop lancé et connecté, rien ne marche : ni /pc, ni les overlays.
+
+
+ÉTAPE 2 - METTRE LES FICHIERS EN LIGNE (GitHub Pages)
+-----------------------------------------------------
+TikTok LIVE Studio n'accepte que des adresses https://, pas les fichiers du PC.
+
+1. Va sur https://github.com/marien272/overlays-live
+   (s'il n'existe pas : https://github.com/new -> nom « overlays-live » -> Public -> Create repository)
+2. Clique « Add file » -> « Upload files ».
+3. Glisse les 4 fichiers .html (pas le dossier, pas ce LISEZ-MOI) -> « Commit changes ».
+   Les anciens fichiers du même nom sont remplacés automatiquement.
+4. Si ce n'est pas déjà fait : Settings -> Pages -> Branch « main » / « (root) » -> Save.
+5. Attends 1 à 2 minutes. Les adresses sont :
+
+     https://marien272.github.io/overlays-live/rang-follow.html
+     https://marien272.github.io/overlays-live/top4-donateurs.html
+     https://marien272.github.io/overlays-live/top4-likeurs.html
+     https://marien272.github.io/overlays-live/drop-loot.html
+
+Vérifie en ouvrant une adresse avec « ?test » à la fin dans Chrome
+(ex. https://marien272.github.io/overlays-live/rang-follow.html?test) : des fausses données
+doivent apparaître. Sans « ?test », la page est vide et transparente : c'est normal.
+
+
+ÉTAPE 3 - AJOUTER LES SOURCES DANS TIKTOK LIVE STUDIO
+-----------------------------------------------------
+Pour chacune des 4 adresses : « + Ajouter une source » -> « Lien » -> colle l'adresse
+(SANS « ?test ») -> règle la taille :
+
+  Source               | Largeur | Hauteur | Où la placer
+  ---------------------|---------|---------|--------------------------------------
+  rang-follow.html     | 1920    | 1080    | plein écran, au-dessus du jeu
+  top4-donateurs.html  | 360     | 230     | où tu veux (ex. en haut à gauche)
+  top4-likeurs.html    | 360     | 230     | où tu veux (ex. en haut à droite)
+  drop-loot.html       | 720     | 70      | où tu veux (ex. en bas)
+
+Les sources sont enregistrées : à faire une seule fois.
+Mets-les au-dessus de ta capture de jeu dans la liste des sources, sinon elles sont cachées.
+
+
+ÉTAPE 4 - À CHAQUE LIVE
+-----------------------
+1. Lance TikFinity Desktop (connecté à ton compte).
+2. Lance ton live dans TikTok LIVE Studio.
+3. Dans TikFinity Desktop, clique « Connect to TikTok LIVE ».
+
+Les Top 4 et le DAILY LIKE repartent à zéro tout seuls à chaque live : dès la fin du live,
+ou au plus tard quand le live suivant commence. Ils restent en mémoire si tu relances
+LIVE Studio en cours de live.
+
+
+MODIFIER UN OVERLAY PLUS TARD
+-----------------------------
+Renvoie le nouveau fichier sur GitHub (Add file -> Upload files) : les adresses ne changent pas.
+Dans LIVE Studio : clic droit sur la source -> Actualiser.
+
+
+RÉGLAGES OPTIONNELS (à ajouter à la fin de l'adresse)
+-----------------------------------------------------
+  rang-follow.html?duree=8         l'alerte reste 8 s au lieu de 6
+  drop-loot.html?palier=50000      paliers de 50 000 au lieu de 30 000
+  drop-loot.html?reset             remet le compteur à zéro (retire-le ensuite)
+  top4-donateurs.html?reset        remet le classement à zéro (pareil pour top4-likeurs)
+
+
+EN CAS DE PROBLÈME
+------------------
+- Rien ne s'affiche en live : TikFinity Desktop est-il lancé ET « Connect to TikTok LIVE » cliqué ?
+- Une page GitHub affiche 404 : attends 1-2 min ou vérifie le nom exact du fichier.
+- L'ancienne version s'affiche : clic droit sur la source -> Actualiser.
+- /pc ne répond pas : le chatbot doit être activé dans TikFinity Desktop (étape 1).
